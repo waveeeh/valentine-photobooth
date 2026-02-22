@@ -1,4 +1,5 @@
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { useState } from "react";
 import { LandingScreen } from "./LandingScreen";
 import { CameraScreen, FilterType } from "./CameraScreen";
@@ -90,7 +91,7 @@ export default function App() {
         </AnimatePresence>
       </main>
       <footer className="fixed bottom-2 right-2 text-xs text-gray-400 z-50">
-        created with 💖 by waveeh
+        created with 💖 by waveeeh
       </footer>
     </div>
   );
