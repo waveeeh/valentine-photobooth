@@ -116,7 +116,7 @@ export const CameraScreen = ({ onBack, onCapture, layoutCount }: CameraScreenPro
           <ChevronLeft size={window.innerWidth < 640 ? 20 : 24} />
         </button>
         <div className="text-xs sm:text-sm text-gray-500 font-medium tracking-widest uppercase">
-             {capturing ? `${photosTaken}/${layoutCount}` : "Home Proj. Photo Booth"}
+             {capturing ? `${photosTaken}/${layoutCount}` : "Photo Booth"}
         </div>
         <div className="w-6 sm:w-8 md:w-10"></div> 
       </div>

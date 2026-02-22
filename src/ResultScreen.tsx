@@ -104,7 +104,7 @@ export const ResultScreen = ({
         ctx.font = window.innerWidth < 640 ? "700 18px 'Courier New', monospace" : "700 24px 'Courier New', monospace";
         ctx.fillStyle = textColor;
         ctx.letterSpacing = "4px";
-        ctx.fillText("Home Proj.", stripWidth / 2, footerStartY);
+        ctx.fillText("HAPPY VALENTINE'S DAY 💌", stripWidth / 2, footerStartY);
         
         // Date
         const date = new Date();

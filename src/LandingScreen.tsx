@@ -36,12 +36,12 @@ export const LandingScreen = ({ onStart }: LandingScreenProps) => {
 
         {/* Title */}
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-2 sm:mb-3 font-['Poppins'] tracking-tight text-center">
-          Home Proj.<br/>Photo Booth
+          Will You Be My Valentine?🌷
         </h1>
         
         {/* Subtitle */}
         <p className="text-base sm:text-lg md:text-xl text-gray-500 mb-8 sm:mb-10 md:mb-12 font-light tracking-wide text-center">
-          Capture the moment.
+          Save this moment.❤️
         </p>
 
         {/* Start Button */}
