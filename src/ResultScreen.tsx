@@ -1,18 +1,29 @@
 import { useRef, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Download, RefreshCcw } from "lucide-react";
+import { Download, RefreshCcw, ChevronLeft } from "lucide-react";
 import { FilterType, StripStyle } from "./CameraScreen";
+import { LayoutType } from "./LayoutSelectionScreen";
 
 interface ResultScreenProps {
   images: string[];
   filter: FilterType;
   stripStyle: StripStyle;
+  layoutCount: LayoutType;
   onRetake: () => void;
+  onBack?: () => void;
 }
 
-export const ResultScreen = ({ images, filter, stripStyle, onRetake }: ResultScreenProps) => {
+export const ResultScreen = ({ 
+  images, 
+  filter, 
+  stripStyle, 
+  layoutCount,
+  onRetake,
+  onBack 
+}: ResultScreenProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -39,17 +50,16 @@ export const ResultScreen = ({ images, filter, stripStyle, onRetake }: ResultScr
     loadImages().then(imgs => {
         if (imgs.length === 0) return;
 
-        // Settings for the strip - scaled for web display
-        const photoWidth = 400; // Smaller for better web performance
+        // Responsive sizing based on layout
+        const photoWidth = window.innerWidth < 640 ? 300 : 400;
         const aspectRatio = imgs[0].height / imgs[0].width;
         const photoHeight = photoWidth * aspectRatio;
         
-        const padding = 24; 
-        const topHeaderHeight = 0;
-        const bottomFooterHeight = 140; // Smaller footer for web
+        const padding = window.innerWidth < 640 ? 16 : 24; 
+        const bottomFooterHeight = window.innerWidth < 640 ? 100 : 140;
         
         const stripWidth = photoWidth + (padding * 2);
-        const stripHeight = (padding * 5) + (photoHeight * 4) + bottomFooterHeight + topHeaderHeight;
+        const stripHeight = (padding * (layoutCount + 1)) + (photoHeight * layoutCount) + bottomFooterHeight;
 
         canvas.width = stripWidth;
         canvas.height = stripHeight;
@@ -64,7 +74,7 @@ export const ResultScreen = ({ images, filter, stripStyle, onRetake }: ResultScr
         }
         ctx.fillRect(0, 0, stripWidth, stripHeight);
 
-        // Draw Filter Logic
+        // Apply filter
         let filterString = "none";
         switch (filter) {
             case "grayscale": filterString = "grayscale(100%)"; break;
@@ -76,50 +86,42 @@ export const ResultScreen = ({ images, filter, stripStyle, onRetake }: ResultScr
 
         // Draw each photo
         imgs.forEach((img, index) => {
-            const y = padding + topHeaderHeight + (index * (photoHeight + padding));
+            const y = padding + (index * (photoHeight + padding));
             ctx.drawImage(img, padding, y, photoWidth, photoHeight);
         });
 
-        // Reset filter
         ctx.filter = "none";
 
-        // Draw Typography
+        // Draw footer
         ctx.textAlign = "center";
         
         const textColor = stripStyle === "black" ? "#ffffff" : "#1a1a1a";
         const metaColor = stripStyle === "black" ? "#888888" : "#666666";
-        const lineColor = stripStyle === "black" ? "#333333" : "#e5e5e5";
-
-        // "PHOTO BOOTH" Title
-        ctx.font = "700 24px 'Courier New', monospace"; 
+        
+        const footerStartY = stripHeight - bottomFooterHeight + (window.innerWidth < 640 ? 20 : 30);
+        
+        // Message based on layout
+        ctx.font = window.innerWidth < 640 ? "700 18px 'Courier New', monospace" : "700 24px 'Courier New', monospace";
         ctx.fillStyle = textColor;
         ctx.letterSpacing = "4px";
-        const footerStartY = stripHeight - bottomFooterHeight + 30;
+        ctx.fillText("Home Proj.", stripWidth / 2, footerStartY);
         
-        ctx.fillText("HAPPY VALENTINE'S DAY 💌", stripWidth / 2, footerStartY);
-        
-        ctx.font = "400 10px 'Courier New', monospace";
-        ctx.fillStyle = metaColor;
-        ctx.fillText("© waveeeh", stripWidth / 2, footerStartY + 70);
-
         // Date
         const date = new Date();
         const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         
-        ctx.font = "400 16px 'Courier New', monospace";
+        ctx.font = window.innerWidth < 640 ? "400 12px 'Courier New', monospace" : "400 16px 'Courier New', monospace";
         ctx.fillStyle = metaColor;
         ctx.letterSpacing = "2px";
-        ctx.fillText(`${dateStr} • ${timeStr}`, stripWidth / 2, footerStartY + 30);
+        ctx.fillText(`${dateStr} • ${timeStr}`, stripWidth / 2, footerStartY + (window.innerWidth < 640 ? 20 : 30));
 
-        // Decorative line
-        const lineY = footerStartY + 50;
-        ctx.beginPath();
-        ctx.moveTo(stripWidth/2 - 40, lineY);
-        ctx.lineTo(stripWidth/2 + 40, lineY);
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        // Watermark
+        ctx.font = "400 10px 'Courier New', monospace";
+        ctx.fillStyle = metaColor;
+        ctx.globalAlpha = 0.5;
+        ctx.fillText("© waveeeh", stripWidth - 60, stripHeight - 15);
+        ctx.globalAlpha = 1;
 
         try {
             const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
@@ -129,82 +131,104 @@ export const ResultScreen = ({ images, filter, stripStyle, onRetake }: ResultScr
         }
     });
 
-  }, [images, filter, stripStyle]);
+  }, [images, filter, stripStyle, layoutCount]);
+
+  const handleSave = () => {
+    setSaving(true);
+    setTimeout(() => {
+      setSaving(false);
+      const link = document.createElement('a');
+      link.href = downloadUrl || '';
+      link.download = `photobooth-${new Date().toISOString().slice(0,10)}.jpg`;
+      link.click();
+    }, 500);
+  };
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-white">
-      {/* Main Content - Scrollable if needed */}
-      <div className="flex-1 overflow-y-auto pb-24">
-        <div className="flex flex-col items-center px-4 py-6 md:py-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center w-full"
+      {/* Header */}
+      <div className="flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
+        {onBack ? (
+          <button 
+            onClick={onBack}
+            className="p-2 rounded-full bg-white text-gray-700 hover:bg-gray-100 transition-colors"
           >
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 sm:mb-6 font-['Poppins']">
-                Your Photostrip
-            </h2>
+            <ChevronLeft size={window.innerWidth < 640 ? 20 : 24} />
+          </button>
+        ) : <div className="w-10" />}
+        
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 font-['Poppins']">
+          Your Photostrip
+        </h2>
+        
+        <div className="w-10" />
+      </div>
 
-            {/* The Result Display - Responsive sizing */}
-            <div className="relative shadow-xl mb-6 transform transition-transform duration-300">
-                {downloadUrl ? (
-                    <img 
-                        src={downloadUrl} 
-                        alt="Photostrip" 
-                        className="w-[240px] sm:w-[280px] md:w-[320px] lg:w-[360px] h-auto rounded-sm shadow-lg" 
-                    />
-                ) : (
-                    <div className="w-[240px] sm:w-[280px] md:w-[320px] h-[600px] sm:h-[700px] md:h-[800px] bg-gray-100 animate-pulse rounded-sm flex items-center justify-center text-gray-400 text-sm">
-                        Generating your strip...
-                    </div>
-                )}
-            </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto pb-28">
+        <div className="flex flex-col items-center px-4 py-6">
+          {/* Photo Strip Display */}
+          <div className="relative shadow-2xl mb-6 transform transition-transform duration-300 hover:scale-[1.02]">
+            {downloadUrl ? (
+              <img 
+                src={downloadUrl} 
+                alt="Photostrip" 
+                className="w-[260px] sm:w-[300px] md:w-[340px] lg:w-[380px] h-auto rounded-lg shadow-xl" 
+              />
+            ) : (
+              <div className={`w-[260px] sm:w-[300px] md:w-[340px] h-[${layoutCount * 180}px] bg-gray-100 animate-pulse rounded-lg flex items-center justify-center text-gray-400 text-sm`}>
+                Generating your strip...
+              </div>
+            )}
+          </div>
 
-            {/* Filter & Style Info
-            <div className="flex flex-wrap justify-center gap-2 text-xs sm:text-sm text-gray-500 mb-4">
-                <span className="px-3 py-1 bg-gray-100 rounded-full">
-                    Filter: {filter === "none" ? "Normal" : filter}
-                </span>
-                <span className="px-3 py-1 bg-gray-100 rounded-full">
-                    Strip: {stripStyle}
-                </span>
-            </div> */}
-          </motion.div>
+          {/* Info Tags */}
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            <span className="px-3 py-1 bg-gray-100 rounded-full text-xs sm:text-sm text-gray-600">
+              {layoutCount} Photos
+            </span>
+            <span className="px-3 py-1 bg-gray-100 rounded-full text-xs sm:text-sm text-gray-600">
+              Filter: {filter === "none" ? "Normal" : filter}
+            </span>
+            <span className="px-3 py-1 bg-gray-100 rounded-full text-xs sm:text-sm text-gray-600">
+              {stripStyle} Strip
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Fixed Bottom Buttons - Always visible */}
+      {/* Fixed Bottom Buttons */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg">
         <div className="flex gap-3 justify-center items-center max-w-md mx-auto">
-            <motion.button 
-                whileTap={{ scale: 0.97 }}
-                onClick={onRetake}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 rounded-full bg-gray-100 text-gray-700 text-sm sm:text-base font-medium hover:bg-gray-200 transition-colors"
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onRetake}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-colors"
+          >
+            <RefreshCcw size={16} />
+            <span className=" xs:inline">Retake</span>
+          </motion.button>
+          
+          {!downloadUrl ? (
+            <button disabled className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-gray-400 text-white text-sm font-medium cursor-not-allowed">
+              <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+              <span className=" xs:inline">Processing</span>
+            </button>
+          ) : (
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-black transition-colors shadow-md disabled:opacity-50"
             >
-                <RefreshCcw size={16} className="sm:w-[18px] sm:h-[18px]" />
-                <span>Retake</span>
+              <Download size={16} />
+              <span className=" xs:inline">{saving ? "Saving..." : "Download"}</span>
             </motion.button>
-            
-            {!downloadUrl ? (
-                <button disabled className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-8 py-3 rounded-full bg-gray-400 text-white text-sm sm:text-base font-medium cursor-not-allowed">
-                     <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></span>
-                     <span>Processing</span>
-                </button>
-            ) : (
-                <motion.a 
-                    whileTap={{ scale: 0.97 }}
-                    href={downloadUrl}
-                    download={`photobooth-${new Date().toISOString().slice(0,10)}.jpg`}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-8 py-3 rounded-full bg-gray-900 text-white text-sm sm:text-base font-medium hover:bg-black transition-colors shadow-md"
-                >
-                    <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
-                    <span>Download</span>
-                </motion.a>
-            )}
+          )}
         </div>
       </div>
 
-      {/* Hidden Canvas for Processing */}
+      {/* Hidden Canvas */}
       <canvas ref={canvasRef} className="hidden" />
     </div>
   );

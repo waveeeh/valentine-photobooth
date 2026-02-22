@@ -4,26 +4,38 @@ import { useState } from "react";
 import { LandingScreen } from "./LandingScreen";
 import { CameraScreen, FilterType } from "./CameraScreen";
 import { ResultScreen } from "./ResultScreen";
+import { SupportScreen } from "./SupportScreen";
 import { AnimatePresence, motion } from "motion/react";
-
-type Screen = "landing" | "camera" | "result";
+import { LayoutSelectionScreen, LayoutType } from "./LayoutSelectionScreen";
+type Screen = "landing" | "support" | "layout" | "camera" | "result";
 
 interface CaptureData {
   images: string[];
   filter: FilterType;
   stripStyle: "white" | "black" | "gray";
+  layout: LayoutType;
 }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("landing");
   const [captureData, setCaptureData] = useState<CaptureData | null>(null);
+  const [selectedLayout, setSelectedLayout] = useState<LayoutType>(4);
 
   const handleStart = () => {
+    setScreen("support");
+  };
+
+  const handleSupportContinue = () => {
+    setScreen("layout");
+  };
+
+  const handleLayoutContinue = (layout: LayoutType) => {
+    setSelectedLayout(layout);
     setScreen("camera");
   };
 
   const handleCapture = (images: string[], filter: FilterType, stripStyle: "white" | "black" | "gray") => {
-    setCaptureData({ images, filter, stripStyle });
+    setCaptureData({ images, filter, stripStyle, layout: selectedLayout });
     setScreen("result");
   };
 
@@ -34,6 +46,14 @@ export default function App() {
 
   const handleBackToLanding = () => {
       setScreen("landing");
+  }
+
+  const handleBackToLayout = () => {
+    setScreen("layout");
+  }
+
+  function handleLayoutSelected(layout: number): void {
+    throw new Error("Function not implemented.");
   }
 
   return (
@@ -58,6 +78,35 @@ export default function App() {
             </motion.div>
           )}
 
+          {screen === "support" && (
+            <motion.div 
+              key="support"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.4 }}
+              className="w-full h-full flex items-center justify-center"
+            >
+              <SupportScreen onContinue={handleSupportContinue} />
+            </motion.div>
+          )}
+
+          {screen === "layout" && (
+            <motion.div 
+              key="layout"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.4 }}
+              className="w-full h-full"
+            >
+              <LayoutSelectionScreen 
+                onContinue={handleLayoutContinue}  // ✅ Use the correct function!
+                onBack={() => setScreen("support")}
+              />
+            </motion.div>
+          )}
+
           {screen === "camera" && (
              <motion.div 
                 key="camera"
@@ -67,7 +116,11 @@ export default function App() {
                 transition={{ duration: 0.4 }}
                 className="w-full h-full flex flex-col items-center justify-center"
             >
-               <CameraScreen onCapture={handleCapture} onBack={handleBackToLanding} />
+               <CameraScreen 
+                 onCapture={handleCapture} 
+                 onBack={handleBackToLayout} 
+                 layoutCount={selectedLayout}
+               />
              </motion.div>
           )}
 
@@ -84,15 +137,13 @@ export default function App() {
                   images={captureData.images} 
                   filter={captureData.filter}
                   stripStyle={captureData.stripStyle}
+                  layoutCount={captureData.layout}
                   onRetake={handleRetake} 
                 />
              </motion.div>
           )}
         </AnimatePresence>
       </main>
-      <footer className="fixed bottom-2 right-2 text-xs text-gray-400 z-50">
-        created with 💖 by waveeeh
-      </footer>
     </div>
   );
 }

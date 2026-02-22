@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronLeft } from "lucide-react";
+import { LayoutType } from "./LayoutSelectionScreen";
 
 export type FilterType = "none" | "grayscale" | "sepia" | "soft" | "vintage";
 export type StripStyle = "white" | "black" | "gray";
@@ -9,11 +10,12 @@ export type StripStyle = "white" | "black" | "gray";
 interface CameraScreenProps {
   onBack: () => void;
   onCapture: (images: string[], filter: FilterType, stripStyle: StripStyle) => void;
+  layoutCount: LayoutType;
 }
 
 // Responsive video constraints based on screen size
 const getVideoConstraints = () => {
-  const width = window.innerWidth;
+  const width = typeof window !== 'undefined' ? window.innerWidth : 1024;
   if (width < 640) { // mobile
     return { width: 480, height: 640, facingMode: "user" };
   } else if (width < 1024) { // tablet
@@ -23,7 +25,7 @@ const getVideoConstraints = () => {
   }
 };
 
-export const CameraScreen = ({ onBack, onCapture }: CameraScreenProps) => {
+export const CameraScreen = ({ onBack, onCapture, layoutCount }: CameraScreenProps) => {
   const webcamRef = useRef<Webcam>(null);
   const [filter, setFilter] = useState<FilterType>("none");
   const [stripStyle, setStripStyle] = useState<StripStyle>("white");
@@ -48,7 +50,7 @@ export const CameraScreen = ({ onBack, onCapture }: CameraScreenProps) => {
     capturedImages.current = [];
     setPhotosTaken(0);
 
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= layoutCount; i++) {
         // Countdown
         for (let count = 3; count > 0; count--) {
             setCountdown(count);
@@ -64,7 +66,7 @@ export const CameraScreen = ({ onBack, onCapture }: CameraScreenProps) => {
         }
 
         // Brief pause between shots
-        if (i < 4) {
+        if (i < layoutCount) {
             await new Promise(resolve => setTimeout(resolve, 1000)); 
             setCountdown(null);
              await new Promise(resolve => setTimeout(resolve, 500)); 
@@ -79,7 +81,7 @@ export const CameraScreen = ({ onBack, onCapture }: CameraScreenProps) => {
         onCapture(capturedImages.current, filter, stripStyle);
     }, 500);
 
-  }, [webcamRef, onCapture, filter, stripStyle]);
+  }, [webcamRef, onCapture, filter, stripStyle, layoutCount]);
 
   const getFilterStyle = (f: FilterType) => {
     switch (f) {
@@ -91,7 +93,7 @@ export const CameraScreen = ({ onBack, onCapture }: CameraScreenProps) => {
     }
   };
 
-  // Get strip style border color
+  // Get strip style border color for preview
   const getStripBorderColor = (style: StripStyle) => {
     switch (style) {
       case "white": return "border-white";
@@ -109,11 +111,12 @@ export const CameraScreen = ({ onBack, onCapture }: CameraScreenProps) => {
           onClick={onBack}
           disabled={capturing}
           className={`p-1.5 sm:p-2 rounded-full bg-white/80 text-gray-700 shadow-sm hover:bg-white transition-colors ${capturing ? 'opacity-0' : 'opacity-100'}`}
+          aria-label="Go back"
         >
           <ChevronLeft size={window.innerWidth < 640 ? 20 : 24} />
         </button>
         <div className="text-xs sm:text-sm text-gray-500 font-medium tracking-widest uppercase">
-             {capturing ? `${photosTaken}/4` : "Photo Booth"}
+             {capturing ? `${photosTaken}/${layoutCount}` : "Home Proj. Photo Booth"}
         </div>
         <div className="w-6 sm:w-8 md:w-10"></div> 
       </div>
@@ -160,11 +163,11 @@ export const CameraScreen = ({ onBack, onCapture }: CameraScreenProps) => {
           )}
         </AnimatePresence>
 
-        {/* Strip Style Preview Indicator */}
+        {/* Layout Preview Indicator */}
         {!capturing && (
           <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 z-10">
             <div className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium shadow-md ${stripStyle === 'black' ? 'bg-white/90 text-black' : 'bg-black/50 text-white backdrop-blur-sm'}`}>
-              Strip: {stripStyle.charAt(0).toUpperCase() + stripStyle.slice(1)}
+              {layoutCount} Photos • {stripStyle.charAt(0).toUpperCase() + stripStyle.slice(1)} Strip
             </div>
           </div>
         )}
@@ -228,7 +231,8 @@ export const CameraScreen = ({ onBack, onCapture }: CameraScreenProps) => {
                 whileTap={{ scale: 0.95 }}
                 onClick={startCaptureSequence}
                 disabled={capturing}
-                className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full border-4 border-gray-200 flex items-center justify-center bg-white shadow-lg"
+                className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full border-4 border-gray-200 flex items-center justify-center bg-white shadow-lg hover:shadow-xl transition-shadow"
+                aria-label="Take photos"
             >
                 <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-red-500 shadow-inner"></div>
             </motion.button>
